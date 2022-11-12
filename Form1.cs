@@ -18,15 +18,20 @@ namespace Heath
             InitializeComponent();
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        private void OpenBranch(object sender, EventArgs e)
         {
             string gitRepo = @"C:\Users\Ben\source\repos\Heath";
-            string bitbucketUrl = @"https://bitbucket.org/Baydragon/baydragon-website/branch/";
+            string bitbucketUrl = @"https://bitbucket.org/Baydragon/baydragon-website";
 
             ExecuteCommand($@"cd {gitRepo}");
             string branchName = ExecuteCommand("git branch --show-current");
 
-            System.Diagnostics.Process.Start($"{bitbucketUrl}{branchName}");
+            System.Diagnostics.Process.Start($"{bitbucketUrl}/branch/{branchName}");
+        }
+
+        private void CreatePR(object sender, EventArgs e)
+        {
+            //https://bitbucket.org/Baydragon/baydragon-website/pull-requests/new?source=user%2Fben%2FfixCPShipping&dest=Baydragon%2Fbaydragon-website%3A%3Amaster&event_source=branch_detail
         }
 
         private static string ExecuteCommand(string script)
@@ -66,5 +71,7 @@ namespace Heath
 
             return sb.ToString().Trim();
         }
+
+
     }
 }
