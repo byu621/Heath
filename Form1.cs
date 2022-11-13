@@ -1,16 +1,52 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Management.Automation;
 using System.Text;
 using System.Windows.Forms;
 using System.Configuration;
+using System.Drawing;
 
 namespace Heath
 {
     public partial class Form1 : Form
     {
+        private int yValue;
+        private int yIncrement = 30;
+        private static int BUTTON_WIDTH = 100;
+        private static int BUTTON_HEIGHT = 20;
+        private static string OPEN_BRANCH = "Open Branch";
+        private static string CREATE_PR = "Create PR";
+
         public Form1()
         {
             InitializeComponent();
+            string[] repoNames = ConfigurationManager.AppSettings.Get("repoNames").Split(',');
+            foreach (var repoName in repoNames)
+            {
+                InitializeComponents(repoName);
+            }
+        }
+        private void InitializeComponents(string repoName)
+        {
+            var label = new Label { Text = repoName, Location = CalculateLocation()};
+            Controls.Add(label);
+            
+            var openBranchButton = new Button { Text = OPEN_BRANCH, Location = CalculateLocation(), Size = new Size(BUTTON_WIDTH, BUTTON_HEIGHT)};
+            openBranchButton.Tag = repoName;
+            openBranchButton.Click += OpenBranch;
+            Controls.Add(openBranchButton);
+            
+            var createPrButton = new Button { Text = CREATE_PR, Location = CalculateLocation(), Size = new Size(BUTTON_WIDTH, BUTTON_HEIGHT)};
+            createPrButton.Click += CreatePr;
+            createPrButton.Tag = repoName;
+            Controls.Add(createPrButton);
+        }
+
+        private Point CalculateLocation()
+        {
+            int output = yValue;
+            yValue += yIncrement;
+            return new Point(0, output); ;
         }
 
         private void OpenBranch(object sender, EventArgs e)
@@ -18,19 +54,20 @@ namespace Heath
             string pathToRepo = ConfigurationManager.AppSettings.Get("pathToRepo");
             string bitbucketUrl = ConfigurationManager.AppSettings.Get("bitbucketUrl");
             string workspaceName = ConfigurationManager.AppSettings.Get("workspaceName");
-            string repoName = ConfigurationManager.AppSettings.Get("repoName");
-            string branchName = ExecuteCommand(new[] { $"cd {pathToRepo}", "git branch --show-current" });
+            string repoName = (string) ((Button) sender).Tag;
+            string branchName = ExecuteCommand(new[] { $"cd {pathToRepo}/{repoName}", "git branch --show-current" });
             System.Diagnostics.Process.Start($"{bitbucketUrl}/{workspaceName}/{repoName}/branch/{branchName}");
         }
 
-        private void CreatePR(object sender, EventArgs e)
+        private void CreatePr(object sender, EventArgs e)
         {
             string pathToRepo = ConfigurationManager.AppSettings.Get("pathToRepo");
             string bitbucketUrl = ConfigurationManager.AppSettings.Get("bitbucketUrl");
             string workspaceName = ConfigurationManager.AppSettings.Get("workspaceName");
-            string repoName = ConfigurationManager.AppSettings.Get("repoName");
-            string targetBranch = ConfigurationManager.AppSettings.Get("targetBranch");
-            string branchName = ExecuteCommand(new[] { $"cd {pathToRepo}", "git branch --show-current" });
+            string repoName = (string) ((Button) sender).Tag;
+            string targetBranch = ExecuteCommand(new[] { $"cd {pathToRepo}/{repoName}", $"git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'" });
+            string branchName = ExecuteCommand(new[] { $"cd {pathToRepo}/{repoName}", "git branch --show-current" });
+
             //https://bitbucket.org/Baydragon/baydragon-website/pull-requests/new?source=user%2Fben%2FfixCPShipping&dest=Baydragon%2Fbaydragon-website%3A%3Amaster&event_source=branch_detail
             //https://bitbucket.org/datacompayroll/christmas/pull-requests/new?source=qa&dest=datacompayroll%2Fchristmas%3A%3Adevelop&event_source=branch_detail
 
@@ -39,7 +76,7 @@ namespace Heath
             System.Diagnostics.Process.Start(prUrl);
         }
 
-        private static string ExecuteCommand(string[] scripts)
+        private static string ExecuteCommand(IEnumerable<string> scripts)
         {
             PowerShell _ps = PowerShell.Create();
             string errorMsg = string.Empty;
